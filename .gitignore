@@ -2,3 +2,4 @@
 .terraform/*
 .terraform.*
 local.tfvars
+terraform.tfstate
