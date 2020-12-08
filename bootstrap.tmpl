@@ -1,1 +1,48 @@
 #!/bin/bash
+
+# install docker & associated tools
+apt-get update
+apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg-agent \
+    software-properties-common
+    
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+   
+apt-get update
+apt-get install docker-ce docker-ce-cli containerd.io -y
+
+
+# setup user for influxdb
+useradd -rs /bin/false influxdb
+mkdir -p /etc/influxdb
+
+# prepare influxdb config
+docker run --rm influxdb influxd config | sudo tee /etc/influxdb/influxdb.conf > /dev/null
+chown influxdb:influxdb /etc/influxdb/*
+
+# prepare data, metadata, wal (write-ahead-log) directories
+mkdir -p /var/lib/influxdb
+chown influxdb:influxdb /var/lib/influxdb
+
+# init influxdb with a script
+mkdir -p /etc/influxdb/scripts
+touch /etc/influxdb/scripts/influxdb-init.iql
+echo $'CREATE DATABASE weather;\nCREATE RETENTION POLICY one_week ON weather DURATION 168h REPLICATION 1 DEFAULT;' > /etc/influxdb/scripts/influxdb-init.iql
+
+# creating/updating meta database
+docker run --rm -e INFLUXDB_HTTP_AUTH_ENABLED=true -e INFLUXDB_ADMIN_USER=xxx -e INFLUXDB_ADMIN_PASSWORD=xxx -v /var/lib/influxdb/:/var/lib/influxdb -v /etc/influxdb/scripts:/docker-entrypoint-initdb.d influxdb /init-influxdb.sh
+
+# run InfluxDB on Docker
+USER_ID=$(sudo cat /etc/passwd | grep influxdb | cut -c12-14)
+docker run -d -p 8086:8086 --user ${USER_ID}:${USER_ID} --name=influxdb \
+    -v /etc/influxdb/influxdb.conf:/etc/influxdb/influxdb.conf \
+    -v /var/lib/influxdb/:/var/lib/influxdb/ influxdb -config /etc/influxdb/influxdb.conf
+
