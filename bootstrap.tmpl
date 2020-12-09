@@ -46,3 +46,15 @@ docker run -d -p 8086:8086 --user ${USER_ID}:${USER_ID} --name=influxdb \
     -v /etc/influxdb/influxdb.conf:/etc/influxdb/influxdb.conf \
     -v /var/lib/influxdb/:/var/lib/influxdb/ influxdb -config /etc/influxdb/influxdb.conf
 
+# setup telegraf user 
+useradd -rs /bin/false telegraf
+mkdir -p /etc/telegraf
+
+# prepare telegraf config
+docker run --rm telegraf telegraf config | sudo tee /etc/telegraf/telegraf.conf > /dev/null
+
+chown telegraf:telegraf /etc/telegraf/*
+
+USER_ID=$(getent passwd | grep telegraf | cut -c12-14)
+INFLUX_CONTAINER=$(docker container ls | grep influxdb | awk '{ print $1 }')
+docker run -d --user ${USER_ID}:${USER_ID} --name=telegraf --net=container:${INFLUX_CONTAINER} -e HOST_PROC=/host/proc -v /proc:/host/proc:ro -v /etc/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro telegraf
