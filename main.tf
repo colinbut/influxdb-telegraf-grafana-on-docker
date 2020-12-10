@@ -32,6 +32,8 @@ resource "aws_instance" "host_server" {
   instance_type = var.instance_type
   key_name      = var.key_name_pair
 
+  vpc_security_group_ids = [ aws_security_group.security_group.id ]
+
   user_data = templatefile("${path.cwd}/bootstrap.tmpl", {})
 
   tags = {
@@ -54,7 +56,7 @@ resource "aws_security_group_rule" "allow_access_to_grafana" {
     security_group_id   = aws_security_group.security_group.id
 }
 
-resource "aws_security_group_rule" "allow_ssh_from_bastian" {
+resource "aws_security_group_rule" "allow_ssh_from_outside" {
     type                = "ingress"
     description         = "allow ssh from outside"
     from_port           = 22
