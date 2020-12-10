@@ -55,6 +55,10 @@ docker run --rm telegraf telegraf config | sudo tee /etc/telegraf/telegraf.conf 
 
 chown telegraf:telegraf /etc/telegraf/*
 
+# run Telegraf on Docker
 USER_ID=$(getent passwd | grep telegraf | cut -c12-14)
 INFLUX_CONTAINER=$(docker container ls | grep influxdb | awk '{ print $1 }')
 docker run -d --user ${USER_ID}:${USER_ID} --name=telegraf --net=container:${INFLUX_CONTAINER} -e HOST_PROC=/host/proc -v /proc:/host/proc:ro -v /etc/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro telegraf
+
+# run Grafana on Docker
+docker run -d --name grafana -p 3000:3000 grafana/grafana
