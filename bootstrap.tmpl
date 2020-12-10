@@ -41,8 +41,8 @@ echo $'CREATE DATABASE weather;\nCREATE RETENTION POLICY one_week ON weather DUR
 docker run --rm -e INFLUXDB_HTTP_AUTH_ENABLED=true -e INFLUXDB_ADMIN_USER=xxx -e INFLUXDB_ADMIN_PASSWORD=xxx -v /var/lib/influxdb/:/var/lib/influxdb -v /etc/influxdb/scripts:/docker-entrypoint-initdb.d influxdb /init-influxdb.sh
 
 # run InfluxDB on Docker
-USER_ID=$(sudo cat /etc/passwd | grep influxdb | cut -c12-14)
-docker run -d -p 8086:8086 --user ${USER_ID}:${USER_ID} --name=influxdb \
+INFLUX_USER_ID=$(sudo cat /etc/passwd | grep influxdb | cut -c12-14)
+docker run -d -p 8086:8086 --user \$${INFLUX_USER_ID}:\$${INFLUX_USER_ID} --name=influxdb \
     -v /etc/influxdb/influxdb.conf:/etc/influxdb/influxdb.conf \
     -v /var/lib/influxdb/:/var/lib/influxdb/ influxdb -config /etc/influxdb/influxdb.conf
 
@@ -56,9 +56,9 @@ docker run --rm telegraf telegraf config | sudo tee /etc/telegraf/telegraf.conf 
 chown telegraf:telegraf /etc/telegraf/*
 
 # run Telegraf on Docker
-USER_ID=$(getent passwd | grep telegraf | cut -c12-14)
+TELEGRAF_USER_ID=$(getent passwd | grep telegraf | cut -c12-14)
 INFLUX_CONTAINER=$(docker container ls | grep influxdb | awk '{ print $1 }')
-docker run -d --user ${USER_ID}:${USER_ID} --name=telegraf --net=container:${INFLUX_CONTAINER} -e HOST_PROC=/host/proc -v /proc:/host/proc:ro -v /etc/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro telegraf
+docker run -d --user \$${TELEGRAF_USER_ID}:\$${TELEGRAF_USER_ID} --name=telegraf --net=container:\$${INFLUX_CONTAINER} -e HOST_PROC=/host/proc -v /proc:/host/proc:ro -v /etc/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro telegraf
 
 # run Grafana on Docker
 docker run -d --name grafana -p 3000:3000 grafana/grafana
